@@ -1,0 +1,59 @@
+# toy: Datasets/toy/toy.dat  8 
+	# 0.4    5 ->  py .\checker.py solutions/toy/toy_0.4 example
+	# 0.25   14
+	# 0.125  19
+
+
+find 1
+	alt: base -> removing unfrequent patterns
+	apr: bas -> list/set trick ->
+
+find 1
+	alt: 0.17 -> 0.12
+	apr: 0.33
+# "Datasets/chess/chess.dat":    3196
+	# 0.9   622  ->  py .\checker.py solutions/chess/chess_0.9 example
+	# 0.8   8227
+
+find 1
+	alt: 0.28 -> 0.17
+	apr: 0.88
+# "Datasets/mushroom/mushroom.dat" 8125
+	# 0.8   23   ->  py .\checker.py solutions/mushroom/mushroom_0.8 example
+	# 0.5   153
+
+find 1
+	alt: 16 -> 2.5
+	apr: 164
+# "Datasets/pumsb/pumsb_star.dat"  49 046
+
+find 1
+	alt: 27 -> 3.6
+	apr:
+# "Datasets/pumsb/pumsb.dat"	   49 046 
+	# 0.97   38  -> 4.4 -> py .\checker.py solutions/pumsb/pumsb_0.97 example
+	# 0.95   172
+
+find 1 
+	alt: 5 -> 2.35
+	apr:
+# "Datasets/connect/connect.dat" 67 557
+	# 0.98  180   -> 3.71 -> py .\checker.py solutions/connect/connect_0.98 example
+	# 0.97  487  -> 4.95 
+
+
+find 1
+	alt: IMP -> 1.31
+	apr:  75
+# "Datasets/retail/retail.dat" 88 162
+	# 0.1    9  ->  1.5  -> py .\checker.py solutions/retail/retail_0.1 example
+	# 0.05   16 ->  1.37 
+
+find 1
+	alt: 34 -> 10.8
+	apr: 
+# "Datasets/accidents/accidents.dat":    340 183
+	# 0.9   31  -> 12.5   ->  py .\checker.py solutions/accidents/accidents_0.9 example
+	# 0.85  71  -> 15.75  
+   
+
