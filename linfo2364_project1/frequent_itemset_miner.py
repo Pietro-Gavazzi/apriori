@@ -384,11 +384,11 @@ def alternative_miner(filepath, minFrequency):
 
 
 
-# if (__name__=="__main__"):
-# 	a = time.perf_counter()
-# 	alternative_miner("Datasets/retail/retail.dat", 0.002)
-# 	b = time.perf_counter()
-# 	print(b-a)
+if (__name__=="__main__"):
+	a = time.perf_counter()
+	apriori("Datasets/retail/retail.dat", 1)
+	b = time.perf_counter()
+	print(b-a)
 	
 
 
@@ -398,55 +398,55 @@ def alternative_miner(filepath, minFrequency):
 
 
 
-import matplotlib.pyplot as plt
-import numpy as np
+# import matplotlib.pyplot as plt
+# import numpy as np
 
-if __name__=="__main__":
+# if __name__=="__main__":
 
-	list_acc = [ 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005]
-	apriori_time = []
-	alternative_time = []
-	apriori_acc = []
-	aplternative_acc= []
-	list_names = ["retail"]
-	# "retail", "chess", 
+# 	list_acc = [ 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005]
+# 	apriori_time = []
+# 	alternative_time = []
+# 	apriori_acc = []
+# 	aplternative_acc= []
+# 	list_names = ["retail"]
+# 	# "retail", "chess", 
 
-	name = list_names[0]
-	dataset = f"Datasets/{name}/{name}.dat"
+# 	name = list_names[0]
+# 	dataset = f"Datasets/{name}/{name}.dat"
 
-	for name in list_names:
-		apriori_time = []
-		alternative_time = []
-		apriori_acc = []
-		aplternative_acc= []
-		for acc in list_acc:
-			a = time.perf_counter()
-			alternative_miner(dataset, acc)
-			b = time.perf_counter()
-			alternative_time.append(b-a)
-			aplternative_acc.append(acc)
-			if b-a>20:
-				break
+# 	for name in list_names:
+# 		apriori_time = []
+# 		alternative_time = []
+# 		apriori_acc = []
+# 		aplternative_acc= []
+# 		for acc in list_acc:
+# 			a = time.perf_counter()
+# 			alternative_miner(dataset, acc)
+# 			b = time.perf_counter()
+# 			alternative_time.append(b-a)
+# 			aplternative_acc.append(acc)
+# 			if b-a>20:
+# 				break
 
-		for acc in list_acc:
-			a = time.perf_counter()
-			apriori(dataset, acc)
-			b = time.perf_counter()
-			apriori_time.append(b-a)
-			apriori_acc.append(acc)
-			if b-a>20:
-				break	
+# 		for acc in list_acc:
+# 			a = time.perf_counter()
+# 			apriori(dataset, acc)
+# 			b = time.perf_counter()
+# 			apriori_time.append(b-a)
+# 			apriori_acc.append(acc)
+# 			if b-a>20:
+# 				break	
 
-		plt.figure()
-		plt.plot(apriori_acc, apriori_time, label="apriori")
-		plt.plot(aplternative_acc, alternative_time, label="ECLAT")
-		plt.legend()
-		plt.title(f'Performance of algorithm on {name} dataset')
-		plt.yscale('log')
-		plt.xscale('log')
-		plt.xlabel('frequency')
-		plt.ylabel('time (in seconds)')
-		plt.savefig(f"Images/{name}")	
+# 		plt.figure()
+# 		plt.plot(apriori_acc, apriori_time, label="apriori")
+# 		plt.plot(aplternative_acc, alternative_time, label="ECLAT")
+# 		plt.legend()
+# 		plt.title(f'Performance of algorithm on {name} dataset')
+# 		plt.yscale('log')
+# 		plt.xscale('log')
+# 		plt.xlabel('frequency')
+# 		plt.ylabel('time (in seconds)')
+# 		plt.savefig(f"Images/{name}")	
 
 
 
