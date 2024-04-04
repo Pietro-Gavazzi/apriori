@@ -3,13 +3,36 @@ import sys
 class Spade:
 
     def __init__(self, pos_filepath, neg_filepath, k):
-        self.pos_transactions = get_transactions(pos_filepath)
-        self.neg_transactions = get_transactions(neg_filepath)
+
+        self.pos_transactions, self.min_neg_id= spade_repr_from_transaction(get_transactions(pos_filepath))
+        self.pos_transactions_repr = self.pos_transactions['repr']
+        self.pos_transactions_cover = self.pos_transactions['covers']
+
+        self.neg_transactions, _ = spade_repr_from_transaction(get_transactions(neg_filepath), self.min_neg_id)
+        self.neg_transactions_repr = self.neg_transactions['repr']
+        self.neg_transactions_cover = self.neg_transactions['covers']
+        # print(self.pos_transactions)
+        # print(self.neg_transactions)
+
         self.k = k
         
     # Feel free to add parameters to this method
-    def min_top_k(self):
-        pass
+    def min_top_k(self, min_support):
+        self.frequent = {}
+        D = self.pos_transactions_repr.copy()
+        # print(D)
+        for j, transaction in self.neg_transactions_repr.items():
+            try:
+                D[j].update(transaction)
+            except:
+                D[j] = transaction
+
+        # print(D)
+        P = {i:D[i] for i in D if len(D[i])>=min_support}
+        P.update(get_frequent_sequences(P, min_support))
+        return P
+
+
     
     def get_feature_matrices(self):
         return {
@@ -18,6 +41,7 @@ class Spade:
             'train_labels': [],
             'test_labels': [],
         }
+    
 
     def cross_validation(self, nfolds):
         pos_fold_size = len(self.pos_transactions) // nfolds
@@ -53,24 +77,64 @@ def get_transactions(filepath):
                 new_transaction = True
     return transactions
 
-def spade_repr_from_transaction(transactions):
+def spade_repr_from_transaction(transactions, min_id=0):
     spade_repr = {}
     covers = {}
     for tid, transaction in enumerate(transactions):
+        tid+=min_id
         for i, item in enumerate(transaction):
             try:
                 covers[item].add(tid)
             except KeyError:
                 covers[item] = {tid}
             try:
-                spade_repr[item].append((tid, i))
+                spade_repr[item][tid].append(i)
             except KeyError:
-                spade_repr[item] = [(tid, i)]
-    return {'repr': spade_repr, 'covers': covers}
-    return projected, cover 
+                try:
+                    spade_repr[item][tid] = [i]
+                except KeyError:
+                    spade_repr[item] = {tid:[i]}
+
+    return {'repr': spade_repr, 'covers': covers}, tid+1
+
+
+def get_frequent_sequences(P, min_support):
+    frequent_sequences = {}
+    # print(P)
+    for ra in P:
+        Pa = {}
+        for rb in P:
+            rab, P_rab = intersect(ra, rb, P)
+            if len(P_rab)>=min_support:
+                Pa[rab] = P_rab
+        if Pa:
+            frequent_sequences.update(Pa)
+            frequent_sequences.update(get_frequent_sequences(Pa, min_support))
+    return frequent_sequences
+
+
+def intersect(ra, rb, P):
+    transaction_in_common_ids = P[ra].keys()&P[rb].keys()
+    rab = ra+rb[-1]
+    P_rab = {}
+    for t_id in transaction_in_common_ids:
+        pos_a = P[ra][t_id][0]
+        position_list_ab = [pos_b for pos_b in P[rb][t_id] if pos_b>pos_a]
+        if position_list_ab:
+            P_rab[t_id] = position_list_ab
+    return rab, P_rab
+
+
+
 
 if __name__ == '__main__':
-    pos_filepath = sys.argv[1]
-    neg_filepath = sys.argv[2]
-    k = int(sys.argv[3])
+    pos_filepath = "datasets/Protein/PKA_group15.txt"
+    neg_filepath = "datasets/Protein/SRC1521.txt"
+    # Create the object
+    k = 1
     s = Spade(pos_filepath, neg_filepath, k)
+    print(s.min_top_k(200).keys())
+
+
+
+
