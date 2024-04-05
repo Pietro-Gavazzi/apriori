@@ -18,8 +18,6 @@ class Spade:
         self.neg_transactions, self.N = spade_repr_from_transaction(get_transactions(neg_filepath), self.P)
         self.neg_transactions_repr = self.neg_transactions['repr']
         self.neg_transactions_cover = self.neg_transactions['covers']
-        # print(self.pos_transactions)
-        # print(self.neg_transactions)
 
         self.k = k
         
@@ -148,13 +146,18 @@ def spade_repr_from_transaction(transactions, min_id=0):
 def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
     # print(len(frequent_sequences))
     # print(P)
+    unfrequent_P = set()
     for ra in P:
+        if ra in unfrequent_P:
+            continue
         Pa = {}
         if len(frequent_sequences)<k:
             min_support = 1
         else:
             min_support = heapq.nsmallest(1, frequent_sequences)[0][0]
         for rb in P:
+            if rb in unfrequent_P:
+                continue 
             # print(Pa)
             # print(frequent_sequences)
             rab, P_rab = intersect(ra, rb, P)
@@ -174,6 +177,8 @@ def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
                 unfrequent = heapq.heappop(frequent_sequences)
                 if unfrequent[1] in Pa:
                     Pa.pop(unfrequent[1])
+                if unfrequent[1] in P:
+                    unfrequent_P.add(unfrequent[1])
                 nb_exces_sequences-=1
             if Pa: get_frequent_sequences(Pa, top_k, min_support, frequent_sequences)
     return frequent_sequences
@@ -203,15 +208,16 @@ if __name__ == '__main__':
     pos_filepath = "datasets/Protein/PKA_group15.txt"
     neg_filepath = "datasets/Protein/SRC1521.txt"
 
-    pos_filepath = "Test/positive.txt"
-    neg_filepath = "Test/negative.txt"
+    # pos_filepath = "Test/positive.txt"
+    # neg_filepath = "Test/negative.txt"
+
     # Create the object
-    k = 30
+    k = 300
     s = Spade(pos_filepath, neg_filepath, k)
 
     sol = s.min_top_k() 
-    for j in [f"{list(i[1])} {np.sum(np.array(list((i[2].keys())))<s.P)} {np.sum(np.array(list((i[2].keys())))>=s.P)} {len(i[2].keys())}" for i in [heapq.heappop(sol) for k in range(len(sol))]]:
-        print(j)
+    # for j in [f"{list(i[1])} {np.sum(np.array(list((i[2].keys())))<s.P)} {np.sum(np.array(list((i[2].keys())))>=s.P)} {len(i[2].keys())}" for i in [heapq.heappop(sol) for k in range(len(sol))]]:
+    #     print(j)
 
 
 
