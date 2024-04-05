@@ -3,8 +3,7 @@ import heapq
 import numpy as np
 
 
-sys.setrecursionlimit(sys.maxunicode)
-
+# sys.setrecursionlimit(sys.maxunicode)
 
 
 class Spade:
@@ -27,7 +26,7 @@ class Spade:
     def min_top_k(self):
 
         k=self.k
-        self.frequent = {}
+
         D = self.pos_transactions_repr.copy()
         # print(D)
         for j, transaction in self.neg_transactions_repr.items():
@@ -46,9 +45,8 @@ class Spade:
         min_support = 1
 
         for s in D:
-            if len(D[s])>=min_support:
-                heapq.heappush(frequent_sequences, (len(D[s]),s,D[s]))
-                P[s] = D[s] 
+            heapq.heappush(frequent_sequences, (len(D[s]),s,D[s]))
+            P[s] = D[s] 
             # print(frequent_sequences)
             # print(min_support)
 
@@ -68,13 +66,14 @@ class Spade:
                 P.pop(unfrequent[1])
             nb_exces_sequences-=1
         
-        min_support = frequent_sequences[0][0]
+            min_support = frequent_sequences[0][0]
 
         # print(frequent_sequences)
 
         get_frequent_sequences(P, k, min_support, frequent_sequences)
 
-        return frequent_sequences
+        elements = [heapq.heappop(frequent_sequences) for j in range(len(frequent_sequences)) ]
+        return ({j[1]:list(j[2].keys()) for j in elements}, self.P) # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive 
 
 
     
@@ -158,9 +157,9 @@ def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
         for rb in P:
             if rb in unfrequent_P:
                 continue 
-            # print(Pa)
-            # print(frequent_sequences)
+
             rab, P_rab = intersect(ra, rb, P)
+
             if len(P_rab)>=min_support: 
                 heapq.heappush(frequent_sequences, (len(P_rab),rab,P_rab))
                 Pa[rab] = P_rab 
@@ -180,13 +179,14 @@ def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
                 if unfrequent[1] in P:
                     unfrequent_P.add(unfrequent[1])
                 nb_exces_sequences-=1
+
             if Pa: get_frequent_sequences(Pa, top_k, min_support, frequent_sequences)
     return frequent_sequences
 
 
 def intersect(ra, rb, P):
-    transaction_in_common_ids = P[ra].keys()&P[rb].keys()
     rab = ra+rb[-1]
+    transaction_in_common_ids = P[ra].keys()&P[rb].keys()
     P_rab = {}
     for t_id in transaction_in_common_ids:
         pos_a = P[ra][t_id][0]
@@ -196,7 +196,7 @@ def intersect(ra, rb, P):
     return rab, P_rab
 
 
-def weighted_accuracy(P, N, x):
+def weighted_relative_accuracy(P, N, x):
     p = sum([i <= P for i in x.keys()])
     n = len(x)-p 
     # print(P)
@@ -208,16 +208,15 @@ if __name__ == '__main__':
     pos_filepath = "datasets/Protein/PKA_group15.txt"
     neg_filepath = "datasets/Protein/SRC1521.txt"
 
-    # pos_filepath = "Test/positive.txt"
-    # neg_filepath = "Test/negative.txt"
+    pos_filepath = "Test/positive.txt"
+    neg_filepath = "Test/negative.txt"
 
     # Create the object
-    k = 300
+    k = 32
     s = Spade(pos_filepath, neg_filepath, k)
 
-    sol = s.min_top_k() 
-    # for j in [f"{list(i[1])} {np.sum(np.array(list((i[2].keys())))<s.P)} {np.sum(np.array(list((i[2].keys())))>=s.P)} {len(i[2].keys())}" for i in [heapq.heappop(sol) for k in range(len(sol))]]:
-    #     print(j)
+    sol = s.min_top_k()
+
 
 
 
