@@ -161,7 +161,7 @@ def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
             # print(Pa)
             # print(frequent_sequences)
             rab, P_rab = intersect(ra, rb, P)
-            if len(P_rab)>=min_support:
+            if len(P_rab)>=min_support: 
                 heapq.heappush(frequent_sequences, (len(P_rab),rab,P_rab))
                 Pa[rab] = P_rab 
         if Pa:
