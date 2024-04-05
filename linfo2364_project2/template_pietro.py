@@ -9,11 +9,11 @@ class Spade:
 
     def __init__(self, pos_filepath, neg_filepath, k):
 
-        self.pos_transactions, self.min_neg_id= spade_repr_from_transaction(get_transactions(pos_filepath))
+        self.pos_transactions, self.P = spade_repr_from_transaction(get_transactions(pos_filepath))
         self.pos_transactions_repr = self.pos_transactions['repr']
         self.pos_transactions_cover = self.pos_transactions['covers']
 
-        self.neg_transactions, _ = spade_repr_from_transaction(get_transactions(neg_filepath), self.min_neg_id)
+        self.neg_transactions, self.N = spade_repr_from_transaction(get_transactions(neg_filepath), self.P)
         self.neg_transactions_repr = self.neg_transactions['repr']
         self.neg_transactions_cover = self.neg_transactions['covers']
         # print(self.pos_transactions)
@@ -74,7 +74,6 @@ class Spade:
 
         get_frequent_sequences(P, k, min_support, frequent_sequences)
 
-        print ([(a[1], a[0]) for a in [heapq.heappop(frequent_sequences)  for i in range(len(frequent_sequences))]])
         return frequent_sequences
 
 
@@ -140,7 +139,7 @@ def spade_repr_from_transaction(transactions, min_id=0):
                 except KeyError:
                     spade_repr[item] = {tid:[i]}
 
-    return {'repr': spade_repr, 'covers': covers}, tid+1
+    return {'repr': spade_repr, 'covers': covers}, tid-min_id+1
 
 
 
@@ -190,7 +189,12 @@ def intersect(ra, rb, P):
     return rab, P_rab
 
 
-
+def weighted_accuracy(P, N, x):
+    p = sum([i <= P for i in x.keys()])
+    n = len(x)-p 
+    # print(P)
+    # print(N)
+    return (P/(P+N))*(N/(P+N))*(p/P-n/N)
 
 
 if __name__ == '__main__':
@@ -200,9 +204,11 @@ if __name__ == '__main__':
     pos_filepath = "Test/positive.txt"
     neg_filepath = "Test/negative.txt"
     # Create the object
-    k = 1000
+    k = 62
     s = Spade(pos_filepath, neg_filepath, k)
-    s.min_top_k()
+    sol = s.min_top_k() 
+    for j in [f"{list(i[1])} {round(weighted_accuracy(s.P, s.N,  i[2]), 3)}" for i in [heapq.heappop(sol) for k in range(len(sol))]]:
+        print(j)
     # print(s.min_top_k(1).keys())
 
 
