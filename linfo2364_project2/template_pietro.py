@@ -1,5 +1,7 @@
 import sys
 import heapq
+import numpy as np
+
 
 sys.setrecursionlimit(sys.maxunicode)
 
@@ -204,12 +206,12 @@ if __name__ == '__main__':
     pos_filepath = "Test/positive.txt"
     neg_filepath = "Test/negative.txt"
     # Create the object
-    k = 62
+    k = 30
     s = Spade(pos_filepath, neg_filepath, k)
+
     sol = s.min_top_k() 
-    for j in [f"{list(i[1])} {round(weighted_accuracy(s.P, s.N,  i[2]), 3)}" for i in [heapq.heappop(sol) for k in range(len(sol))]]:
+    for j in [f"{list(i[1])} {np.sum(np.array(list((i[2].keys())))<s.P)} {np.sum(np.array(list((i[2].keys())))>=s.P)} {len(i[2].keys())}" for i in [heapq.heappop(sol) for k in range(len(sol))]]:
         print(j)
-    # print(s.min_top_k(1).keys())
 
 
 
