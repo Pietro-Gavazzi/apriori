@@ -73,7 +73,7 @@ class Spade:
         get_frequent_sequences(P, k, min_support, frequent_sequences)
 
         elements = [heapq.heappop(frequent_sequences) for j in range(len(frequent_sequences)) ]
-        return ({j[1]:list(j[2].keys()) for j in elements}, self.P) # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive 
+        return ({j[1]:set(j[2].keys()) for j in elements}, self.P) # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive 
 
 
     
