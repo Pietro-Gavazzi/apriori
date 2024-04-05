@@ -1,4 +1,9 @@
 import sys
+import heapq
+
+sys.setrecursionlimit(sys.maxunicode)
+
+
 
 class Spade:
 
@@ -16,8 +21,12 @@ class Spade:
 
         self.k = k
         
+
+
     # Feel free to add parameters to this method
-    def min_top_k(self, min_support):
+    def min_top_k(self):
+
+        k=self.k
         self.frequent = {}
         D = self.pos_transactions_repr.copy()
         # print(D)
@@ -28,9 +37,45 @@ class Spade:
                 D[j] = transaction
 
         # print(D)
-        P = {i:D[i] for i in D if len(D[i])>=min_support}
-        P.update(get_frequent_sequences(P, min_support))
-        return P
+
+        frequent_sequences = []
+        P = {}
+
+
+        heapq.heapify(frequent_sequences)
+        min_support = 1
+
+        for s in D:
+            if len(D[s])>=min_support:
+                heapq.heappush(frequent_sequences, (len(D[s]),s,D[s]))
+                P[s] = D[s] 
+            # print(frequent_sequences)
+            # print(min_support)
+
+        nb_exces_sequences = len(frequent_sequences)-k if len(frequent_sequences)-k > 0 else 0
+
+        # print(P)
+        # print(nb_exces_sequences)
+
+        while frequent_sequences[nb_exces_sequences-1][0] == frequent_sequences[nb_exces_sequences][0]:
+            nb_exces_sequences -=1
+            if nb_exces_sequences < 0:
+                break
+
+        while nb_exces_sequences > 0:
+            unfrequent = heapq.heappop(frequent_sequences)
+            if unfrequent[1] in P:
+                P.pop(unfrequent[1])
+            nb_exces_sequences-=1
+        
+        min_support = frequent_sequences[0][0]
+
+        # print(frequent_sequences)
+
+        get_frequent_sequences(P, k, min_support, frequent_sequences)
+
+        print ([(a[1], a[0]) for a in [heapq.heappop(frequent_sequences)  for i in range(len(frequent_sequences))]])
+        return frequent_sequences
 
 
     
@@ -98,18 +143,38 @@ def spade_repr_from_transaction(transactions, min_id=0):
     return {'repr': spade_repr, 'covers': covers}, tid+1
 
 
-def get_frequent_sequences(P, min_support):
-    frequent_sequences = {}
+
+def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
+    # print(len(frequent_sequences))
     # print(P)
     for ra in P:
         Pa = {}
+        if len(frequent_sequences)<k:
+            min_support = 1
+        else:
+            min_support = heapq.nsmallest(1, frequent_sequences)[0][0]
         for rb in P:
+            # print(Pa)
+            # print(frequent_sequences)
             rab, P_rab = intersect(ra, rb, P)
             if len(P_rab)>=min_support:
-                Pa[rab] = P_rab
+                heapq.heappush(frequent_sequences, (len(P_rab),rab,P_rab))
+                Pa[rab] = P_rab 
         if Pa:
-            frequent_sequences.update(Pa)
-            frequent_sequences.update(get_frequent_sequences(Pa, min_support))
+            nb_exces_sequences = len(frequent_sequences)-k if len(frequent_sequences)-k > 0 else 0
+
+            n_smallest = heapq.nsmallest(nb_exces_sequences+1, frequent_sequences)
+
+            while n_smallest[nb_exces_sequences-1][0] == n_smallest[nb_exces_sequences][0]:
+                nb_exces_sequences -=1
+                if nb_exces_sequences < 0:
+                    break
+            while nb_exces_sequences > 0:
+                unfrequent = heapq.heappop(frequent_sequences)
+                if unfrequent[1] in Pa:
+                    Pa.pop(unfrequent[1])
+                nb_exces_sequences-=1
+            if Pa: get_frequent_sequences(Pa, top_k, min_support, frequent_sequences)
     return frequent_sequences
 
 
@@ -127,13 +192,18 @@ def intersect(ra, rb, P):
 
 
 
+
 if __name__ == '__main__':
     pos_filepath = "datasets/Protein/PKA_group15.txt"
     neg_filepath = "datasets/Protein/SRC1521.txt"
+
+    pos_filepath = "Test/positive.txt"
+    neg_filepath = "Test/negative.txt"
     # Create the object
-    k = 1
+    k = 1000
     s = Spade(pos_filepath, neg_filepath, k)
-    print(s.min_top_k(200).keys())
+    s.min_top_k()
+    # print(s.min_top_k(1).keys())
 
 
 
