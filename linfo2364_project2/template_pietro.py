@@ -189,9 +189,6 @@ def spade_repr_from_transaction(transactions:dict, min_id=0)->Tuple[dict, int]:
 
 
 
-    
-
-
 
 def get_frequent_sequences(P:dict, top_k:int, min_support:int, heap_best_frequencies:list, dictionnary_most_frequent_sequences:dict)-> None:
     """
