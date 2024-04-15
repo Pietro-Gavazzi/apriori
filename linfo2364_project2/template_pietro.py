@@ -1,31 +1,57 @@
 #!/usr/bin/env python3
-
 import sys
 import heapq
 import numpy as np
 import timeit
+from typing import Tuple
 
+
+#sources:  https://www.youtube.com/watch?v=KTDZBd638s0 and chat gpt
 # sys.setrecursionlimit(sys.maxunicode)
 
 
 class Spade:
+    """
+    A class for mining top-k sequential patterns using the SPADE algorithm.
+    
+    Attributes:
 
-    def __init__(self, pos_filepath, neg_filepath, k):
+    """
 
-        self.pos_transactions, self.P = spade_repr_from_transaction(get_transactions(pos_filepath))
+    
+    def __init__(self, pos_filepath:str, neg_filepath:str, k:int)->None:
+        """
+        Initializes the Spade object.
+
+        Args:
+            pos_filepath (str): The file path to the positive class file.
+            neg_filepath (str): The file path to the negative class file.
+            k (int): The number of top sequences to mine.
+        """
+        
+        (self.pos_transactions, self.nb_pos) = spade_repr_from_transaction(get_transactions(pos_filepath))
         self.pos_transactions_repr = self.pos_transactions['repr']
         self.pos_transactions_cover = self.pos_transactions['covers']
 
-        self.neg_transactions, self.N = spade_repr_from_transaction(get_transactions(neg_filepath), self.P)
+        (self.neg_transactions, self.nb_neg) = spade_repr_from_transaction(get_transactions(neg_filepath), self.nb_pos)
         self.neg_transactions_repr = self.neg_transactions['repr']
         self.neg_transactions_cover = self.neg_transactions['covers']
 
         self.k = k
-        self.top_k_patterns = None
 
       
 
-    def min_top_k(self, criterion_is_wracc=False):
+    def min_top_k(self, criterion_is_wracc=False)->Tuple[dict, int, int]: 
+        """
+        Mines the top-k sequences based on specified criteria.
+
+        Args:
+            criterion_is_wracc (bool): Flag indicating whether to use WRACC as the criterion (default is False, which means using total support).
+
+        Returns:
+            Tuple[dict, int, int]: A tuple containing the mined sequences, the total number of positive transactions, and the total number of negative transactions in the dataset.
+        """
+
 
         k = self.k
         D = self.pos_transactions_repr.copy()
@@ -45,8 +71,8 @@ class Spade:
 
         if criterion_is_wracc:
             for sequence in D:
-                nb_pos = self.P
-                nb_neg = self.N
+                nb_pos = self.nb_pos
+                nb_neg = self.nb_neg
                 wracc = weighted_relative_accuracy(nb_pos, nb_neg, D[sequence])
                 if wracc in dictionnary_best_sequences:
                     dictionnary_best_sequences[wracc].append((wracc, sequence, D[sequence]))
@@ -97,12 +123,20 @@ class Spade:
         # for i in elements:
         #     print(f"{round(i[0], 3)}, {i[1]}")
 
-        # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive
-        return ({j[1]:set(j[2].keys()) for j in elements}, self.P, self.N) 
+        return ({j[1]:set(j[2].keys()) for j in elements}, self.nb_pos, self.nb_neg) 
 
 
 
-def get_transactions(filepath):
+def get_transactions(filepath:str)-> list:
+    """
+    Reads transactions from a file and returns them as a list.
+
+    Args:
+        filepath (str): The file path to read transactions from.
+
+    Returns:
+        list: A list of transactions.
+    """
     transactions = []
     with open(filepath) as f:
         new_transaction = True
@@ -119,7 +153,19 @@ def get_transactions(filepath):
     return transactions
 
 
-def spade_repr_from_transaction(transactions, min_id=0):
+def spade_repr_from_transaction(transactions:dict, min_id=0)->Tuple[dict, int]:
+    """
+    Converts transactions to a representation suitable for SPADE.
+    It iterates through each transaction, assigning a unique transaction ID 
+    It then stores in a dictionnary for all items a dictionnary containing all for all the transactions ID the positions of items within each transaction.
+
+    Args:
+        transactions (dict): The transactions to be converted.
+        min_id (int): The minimum transaction ID (default is 0).
+
+    Returns:
+        Tuple[dict, int]: A tuple containing the representation of transactions and the total number of transactions.
+    """    
     spade_repr = {}
     covers = {}
     for tid, transaction in enumerate(transactions):
@@ -137,12 +183,20 @@ def spade_repr_from_transaction(transactions, min_id=0):
                 except KeyError:
                     spade_repr[item] = {tid:[i]}
 
-    return {'repr': spade_repr, 'covers': covers}, tid-min_id+1
+    return( {'repr': spade_repr, 'covers': covers}, tid-min_id+1)
 
 
 
 
-def remove_unfrequent(k:int, heap_best_values:list, dictionnary_best_sequences:dict):
+def remove_unfrequent(k:int, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
+    """
+    Method that removes unfrequent sequences from the list of best sequences.
+
+    Args:
+        k (int): The number of top sequences to keep.
+        heap_best_values (list): A list of the best values (e.g., support or WRACC scores).
+        dictionnary_best_sequences (dict): A dictionary containing the best sequences.
+    """
 
     # calculate how many sequences are in excess, if there are not we don't have unfrequent
     nb_exces_sequences = len(heap_best_values)-k if len(heap_best_values)-k > 0 else 0
@@ -161,7 +215,17 @@ def remove_unfrequent(k:int, heap_best_values:list, dictionnary_best_sequences:d
 
 
 
-def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, dictionnary_most_frequent_sequences):
+def get_frequent_sequences(P:dict, top_k:int, min_support:int, heap_best_frequencies:list, dictionnary_most_frequent_sequences:dict)-> None:
+    """
+    Finds frequent sequences.
+
+    Args:
+        P (dict): The dictionary of transactions.
+        top_k (int): The number of top sequences to keep.
+        min_support (int): The minimum support threshold.
+        heap_best_frequencies (list): A list of the best frequencies.
+        dictionnary_most_frequent_sequences (dict): A dictionary containing the most frequent sequences.
+    """    
     for ra in P:
         if len(P[ra]) < min_support:
             continue
@@ -169,7 +233,7 @@ def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, diction
         for rb in P:
             if len(P[rb]) < min_support or len(P[ra])<min_support:
                 continue
-            rab, P_rab = intersect(ra, rb, P)
+            (rab, P_rab) = intersect(ra, rb, P)
             support_rab= len(P_rab)
             if support_rab >= min_support:
                 if support_rab in dictionnary_most_frequent_sequences:
@@ -197,12 +261,23 @@ def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, diction
                 else:
                     min_support =heap_best_frequencies[0]
 
-    return heap_best_frequencies, dictionnary_most_frequent_sequences
 
 
 
-def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min_wracc, heap_best_values, dictionnary_best_sequences):
+def get_best_wrack_sequences(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_positive_support:float, min_wracc:float, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
+    """
+    Finds the best WRACC sequences.
 
+    Args:
+        P (dict): The dictionary of transactions.
+        top_k (int): The number of top sequences to keep.
+        nb_pos (int): The number of positive transactions.
+        nb_neg (int): The number of negative transactions.
+        min_positive_support (float): The minimum positive support threshold.
+        min_wracc (float): The minimum WRACC score.
+        heap_best_values (list): A list of the best WRACC values.
+        dictionnary_best_sequences (dict): A dictionary containing the best WRACC sequences.
+    """
     for ra in P:
         ra_pos_support = get_positive_support(nb_pos, P[ra])
         if ra_pos_support < min_positive_support:
@@ -215,7 +290,7 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min
             if ra_pos_support < min_positive_support or rb_pos_support <min_positive_support:
                 continue
 
-            rab, P_rab = intersect(ra, rb, P)
+            (rab, P_rab) = intersect(ra, rb, P)
 
             if len(P_rab)>=1:
                 pos_support = get_positive_support(nb_pos, P_rab)
@@ -249,11 +324,22 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min
                 else:
                     min_wracc = heap_best_values[0]
                     min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
-    return heap_best_values, dictionnary_best_sequences
 
 
 
-def intersect(ra, rb, P):
+
+def intersect(ra:str, rb:str, P:dict)-> Tuple[str, dict]:
+    """
+    Finds the intersection between two sequences.
+
+    Args:
+        ra (str): The first sequence.
+        rb (str): The second sequence.
+        P (dict): The dictionary of transactions.
+
+    Returns:
+        tuple: A tuple containing the intersected sequence and its dictionary.
+    """
     rab = ra + "-" + rb.split("-")[-1]
     #rab = ra+rb[-1]
     transaction_in_common_ids = P[ra].keys()&P[rb].keys()
@@ -264,22 +350,52 @@ def intersect(ra, rb, P):
         if position_list_ab:
             P_rab[t_id] = position_list_ab
 
-    return rab, P_rab
+    return (rab, P_rab)
 
 
-def get_min_positive_support(min_Wracc, nb_pos, nb_neg):
+def get_min_positive_support(min_Wracc:float, nb_pos:int, nb_neg:int)->float:
+    """
+    Calculates the minimum positive support.
+
+    Args:
+        min_Wracc (float): The minimum WRACC score.
+        nb_pos (int): The number of positive transactions.
+        nb_neg (int): The number of negative transactions.
+
+    Returns:
+        float: The minimum positive support.
+    """    
     return (((nb_pos+nb_neg)**2)/nb_neg)*min_Wracc
 
 
-def get_positive_support(P, transactions_containing_pattern):
-    return sum([i < P for i in transactions_containing_pattern])
+def get_positive_support(nb_pos:int, transactions_containing_pattern:dict)->int:
+    """
+    Calculates the positive support.
 
-def weighted_relative_accuracy(nb_pos, nb_neg, transactions_containing_pattern):
+    Args:
+        nb_pos (int): The number of positive transactions.
+        transactions_containing_pattern (dict): The dictionary of transactions containing the pattern.
+
+    Returns:
+        int: The positive support.
+    """    
+    return sum([i < nb_pos for i in transactions_containing_pattern])
+
+def weighted_relative_accuracy(nb_pos:int, nb_neg:int, transactions_containing_pattern:dict)->float:
+    """
+    Calculates the weighted relative accuracy.
+
+    Args:
+        nb_pos (int): The number of positive transactions.
+        nb_neg (int): The number of negative transactions.
+        transactions_containing_pattern (dict): The dictionary of transactions containing the pattern.
+
+    Returns:
+        float: The weighted relative accuracy.
+    """    
     p = sum([i < nb_pos for i in transactions_containing_pattern])
     n = len(transactions_containing_pattern)-p
-    # print(P)
-    # print(N)
-    return (nb_pos/(nb_pos+nb_neg))*(nb_neg/(nb_pos+nb_neg))*(p/nb_pos-n/nb_neg)
+    return round((nb_pos/(nb_pos+nb_neg))*(nb_neg/(nb_pos+nb_neg))*(p/nb_pos-n/nb_neg),5)
 
 
 
@@ -289,15 +405,20 @@ def main():
     neg_filepath = sys.argv[2] # filepath to negative class file
     k = int(sys.argv[3])
 
+    wrack = False
+
 
     # pos_filepath = "datasets/Protein/PKA_group15.txt"
     # neg_filepath = "datasets/Protein/SRC1521.txt"
 
     # pos_filepath = "Test/positive.txt"
     # neg_filepath = "Test/negative.txt"
-    # k = 5
 
-    wrack = True
+    # k = 5
+    # wrack = False
+
+    # k = 7
+    # wrack = True
 
 
     # Create the object
@@ -324,6 +445,7 @@ def main():
 
         if wrack : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
         else: print(string,pos_support, support-pos_support, support)
+
         # print(sol)
 
 
