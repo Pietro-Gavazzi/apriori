@@ -98,7 +98,7 @@ class Spade:
         #     print(f"{round(i[0], 3)}, {i[1]}")
 
         # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive
-        return ({j[1]:set(j[2].keys()) for j in elements}, self.P) 
+        return ({j[1]:set(j[2].keys()) for j in elements}, self.P, self.N) 
 
 
 
@@ -297,22 +297,34 @@ def main():
     # neg_filepath = "Test/negative.txt"
     # k = 5
 
+    wrack = True
 
 
     # Create the object
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
-    sol = s.min_top_k()
+    sol = s.min_top_k(wrack)
     b = timeit.default_timer()
     # print(b-a)
 
     # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive
+
     nb_pos = sol[1]
+    nb_neg = sol[2]
     for i in sol[0]:
         support = len(sol[0][i])
         pos_support = get_positive_support(nb_pos, sol[0][i])
-        print(i.split('-'),pos_support, support-pos_support, support)
-    # print(sol)
+        string = "["
+        k = 1
+        for j in i.split('-'):
+            string = string + j 
+            if k != len(i.split('-')): string = string +", "
+            k+=1
+        string = string + "]"
+
+        if wrack : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
+        else: print(string,pos_support, support-pos_support, support)
+        # print(sol)
 
 
 if __name__ == "__main__":
