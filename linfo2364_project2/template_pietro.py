@@ -28,8 +28,9 @@ class Spade:
 
       
 
-    def min_top_k(self):
-        k=self.k
+    def min_top_k(self, criterion_is_wracc=False):
+
+        k = self.k
         D = self.pos_transactions_repr.copy()
 
         for j, transaction in self.neg_transactions_repr.items():
@@ -44,15 +45,41 @@ class Spade:
         heapq.heapify(frequent_sequences)
         min_support = 1
 
-        for sequence in D:
-            support = len(D[sequence])
-            heapq.heappush(frequent_sequences, (support, sequence, D[sequence]))
-            P[sequence] = D[sequence]
+        if criterion_is_wracc:
+            for sequence in D:
+                nb_pos = self.P
+                nb_neg = self.N
+                wracc = weighted_relative_accuracy(nb_pos, nb_neg, D[sequence] )
+                heapq.heappush(frequent_sequences, (wracc, sequence, D[sequence]))
+                P[sequence] = D[sequence]
+            
+
+        else:
+            for sequence in D:
+                support = len(D[sequence])
+                heapq.heappush(frequent_sequences, (support, sequence, D[sequence]))
+                P[sequence] = D[sequence]
 
 
         not_frequent_anymore = set()
         remove_unfrequent(k, frequent_sequences, not_frequent_anymore)
-        get_frequent_sequences(P, k, min_support, frequent_sequences, not_frequent_anymore)
+
+        if criterion_is_wracc:
+            if len(frequent_sequences)<k:
+                min_positive_support = 0
+                min_wracc = -np.inf
+            else:
+                min_wracc = heapq.nsmallest(1, frequent_sequences)[0][0]
+                min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
+            get_best_wrack_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, frequent_sequences, not_frequent_anymore)
+            print( frequent_sequences)
+
+        else: 
+            if len(frequent_sequences)<k:
+                min_support = 1
+            else:
+                min_support = heapq.nsmallest(1, frequent_sequences)[0][0]
+            get_frequent_sequences(P, k, min_support, frequent_sequences, not_frequent_anymore)
 
         elements = [heapq.heappop(frequent_sequences) for j in range(len(frequent_sequences))]
 
@@ -125,6 +152,7 @@ def remove_unfrequent(k:int, list_best_sequences:list, list_not_best_anymore:set
 
 
 def get_frequent_sequences(P, top_k, min_support, frequent_sequences,  not_frequent_anymore):
+    
 
     for ra in P:
         if ra in not_frequent_anymore:
@@ -166,7 +194,7 @@ def get_frequent_sequences(P, top_k, min_support, frequent_sequences,  not_frequ
 
 
 
-def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, frequent_sequences, not_frequent_anymore):
+def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min_wracc, frequent_sequences, not_frequent_anymore):
 
     for ra in P:
         if ra in not_frequent_anymore:
@@ -181,8 +209,9 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, fre
             if len(P_rab)>=1:
                 pos_support = get_positive_support(nb_pos, P_rab)
                 if pos_support >= min_positive_support:
-                    Wracc = weighted_relative_accuracy(nb_pos, nb_neg, P_rab)
-                    heapq.heappush(frequent_sequences, (Wracc,rab,P_rab))
+                    wracc = weighted_relative_accuracy(nb_pos, nb_neg, P_rab)
+                    if wracc>= min_wracc:
+                        heapq.heappush(frequent_sequences, (wracc,rab,P_rab))
                     Pa[rab] = P_rab
         if Pa:
             # remove elements that became unfrequent
@@ -190,18 +219,19 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, fre
 
             # update min_support after removind unfrequent
             if len(frequent_sequences)<k:
-                min_positive_support = 1
+                min_positive_support = 0
             else:
-                min_positive_support = heapq.nsmallest(1, frequent_sequences)[0][0]
+                min_wracc = heapq.nsmallest(1, frequent_sequences)[0][0]
+                min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
 
             if Pa: 
-                get_best_wrack_sequences(Pa, top_k, min_positive_support, frequent_sequences, not_frequent_anymore)
+                get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, frequent_sequences, not_frequent_anymore)
                 # update min_support after recursive call
                 if len(frequent_sequences)<k:
-                    min_positive_support = 1
+                    min_positive_support = 0
                 else:
-                    min_positive_support = heapq.nsmallest(1, frequent_sequences)[0][0]
-
+                    min_wracc = heapq.nsmallest(1, frequent_sequences)[0][0]
+                    min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
     return frequent_sequences
 
 
@@ -247,10 +277,10 @@ if __name__ == '__main__':
     # neg_filepath = "Test/negative.txt"
 
     # Create the object
-    k = 100
+    k = 5
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
-    sol = s.min_top_k()
+    sol = s.min_top_k(True)
     b = timeit.default_timer()
     print(b-a)
 
