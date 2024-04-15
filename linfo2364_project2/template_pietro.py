@@ -52,11 +52,11 @@ class Spade:
                 nb_neg = self.N
                 wracc = weighted_relative_accuracy(nb_pos, nb_neg, D[sequence])
                 if wracc in dictionnary_best_sequences:
-                    dictionnary_best_sequences[wracc].append(wracc, (sequence, D(sequence)))
+                    dictionnary_best_sequences[wracc].append((wracc, sequence, D[sequence]))
                 else:
                     heapq.heappush(heap_best_values, wracc)
                     dictionnary_best_sequences[wracc] = []
-                    dictionnary_best_sequences[wracc].append((wracc, sequence, D(sequence)))
+                    dictionnary_best_sequences[wracc].append((wracc, sequence, D[sequence]))
                 P[sequence] = D[sequence]
             
 
@@ -81,7 +81,7 @@ class Spade:
             else:
                 min_wracc = heap_best_values[0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
-            get_best_wrack_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, heap_best_values)
+            get_best_wrack_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, heap_best_values, dictionnary_best_sequences)
         
         else: 
             if len(heap_best_values)<k:
@@ -208,7 +208,7 @@ def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, diction
 
 
 
-def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min_wracc, frequent_sequences):
+def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min_wracc, heap_best_values, dictionnary_best_sequences):
 
     for ra in P:
         ra_pos_support = get_positive_support(nb_pos, P[ra])
@@ -229,28 +229,34 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min
                 if pos_support >= min_positive_support:
                     wracc = weighted_relative_accuracy(nb_pos, nb_neg, P_rab)
                     if wracc>= min_wracc:
-                        heapq.heappush(frequent_sequences, (wracc,rab,P_rab))
+
+                        if wracc in dictionnary_best_sequences:
+                            dictionnary_best_sequences[wracc].append((wracc, rab, P_rab))
+                        else:
+                            heapq.heappush(heap_best_values, wracc)
+                            dictionnary_best_sequences[wracc]=[]
+                            dictionnary_best_sequences[wracc].append((wracc, rab, P_rab))
                     Pa[rab] = P_rab
         if Pa:
             # remove elements that became unfrequent
-            remove_unfrequent(k, frequent_sequences)
+            remove_unfrequent(k,heap_best_values, dictionnary_best_sequences)
 
             # update min_support after removind unfrequent
-            if len(frequent_sequences)<k:
+            if len(heap_best_values)<k:
                 min_positive_support = 0
             else:
-                min_wracc = frequent_sequences[0][0]
+                min_wracc = heap_best_values[0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
 
             if Pa: 
-                get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, frequent_sequences)
+                get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, heap_best_values, dictionnary_best_sequences)
                 # update min_support after recursive call
-                if len(frequent_sequences)<k:
+                if len(heap_best_values)<k:
                     min_positive_support = 0
                 else:
-                    min_wracc = frequent_sequences[0][0]
+                    min_wracc = heap_best_values[0]
                     min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
-    return frequent_sequences
+    return heap_best_values, dictionnary_best_sequences
 
 
 
@@ -295,10 +301,10 @@ if __name__ == '__main__':
     neg_filepath = "Test/negative.txt"
 
     # Create the object
-    k = 5
+    k = 7
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
-    sol = s.min_top_k()
+    sol = s.min_top_k(True)
     b = timeit.default_timer()
     print(b-a)
 
