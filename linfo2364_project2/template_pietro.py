@@ -61,27 +61,28 @@ class Spade:
                 P[sequence] = D[sequence]
 
 
-        not_frequent_anymore = set()
-        remove_unfrequent(k, frequent_sequences, not_frequent_anymore)
+        remove_unfrequent(k, frequent_sequences)
 
         if criterion_is_wracc:
             if len(frequent_sequences)<k:
                 min_positive_support = 0
                 min_wracc = -np.inf
             else:
-                min_wracc = heapq.nsmallest(1, frequent_sequences)[0][0]
+                min_wracc = frequent_sequences[0][0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
-            get_best_wrack_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, frequent_sequences, not_frequent_anymore)
-            print( frequent_sequences)
-
+            get_best_wrack_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, frequent_sequences)
+        
         else: 
             if len(frequent_sequences)<k:
                 min_support = 1
             else:
-                min_support = heapq.nsmallest(1, frequent_sequences)[0][0]
-            get_frequent_sequences(P, k, min_support, frequent_sequences, not_frequent_anymore)
+                min_support = frequent_sequences[0][0]
+            get_frequent_sequences(P, k, min_support, frequent_sequences)
 
         elements = [heapq.heappop(frequent_sequences) for j in range(len(frequent_sequences))]
+
+        # for i in elements:
+        #     print(f"{round(i[0], 3)}, {i[1]}")
 
         # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive
         return ({j[1]:set(j[2].keys()) for j in elements}, self.P) 
@@ -128,40 +129,37 @@ def spade_repr_from_transaction(transactions, min_id=0):
 
 
 
-def remove_unfrequent(k:int, list_best_sequences:list, list_not_best_anymore:set):
+def remove_unfrequent(k:int, heap_best_sequences:list):
 
     # calculate how many sequences are in excess, if there are not we don't have unfrequent
-    nb_exces_sequences = len(list_best_sequences)-k if len(list_best_sequences)-k > 0 else 0
+    nb_exces_sequences = len(heap_best_sequences)-k if len(heap_best_sequences)-k > 0 else 0
     if nb_exces_sequences == 0: return
 
+    excess_list = []
 
-    # take n+1 best elements, and remove elements with value strictly inferior to the last best sequence, update "not_best_anymore"
-    excess_smallest_sequences = heapq.nsmallest(nb_exces_sequences+1, list_best_sequences)
-
-    while excess_smallest_sequences[nb_exces_sequences][0] == excess_smallest_sequences[nb_exces_sequences-1][0]:
-        nb_exces_sequences -=1
-        if nb_exces_sequences < 0:
-            break
-
+    # take n+1 best elements, and remove elements with value strictly inferior to the last best sequence
     while nb_exces_sequences > 0:
-        not_best_sequence_anymore = heapq.heappop(list_best_sequences)
-        list_not_best_anymore.add(not_best_sequence_anymore[1])
+        excess_list.append(heapq.heappop(heap_best_sequences))
         nb_exces_sequences-=1
-
-
-
-
-def get_frequent_sequences(P, top_k, min_support, frequent_sequences,  not_frequent_anymore):
     
+    while heap_best_sequences[0] == excess_list[-1]:
+        heapq.heappush(heap_best_sequences, excess_list.pop())
+        nb_exces_sequences -=1
 
+
+
+
+
+
+
+def get_frequent_sequences(P, top_k, min_support, frequent_sequences):
     for ra in P:
-        if ra in not_frequent_anymore:
+        if len(P[ra]) < min_support:
             continue
         Pa = {}
         for rb in P:
-            if rb in not_frequent_anymore:
+            if len(P[rb]) < min_support or len(P[ra])<min_support:
                 continue
-
             rab, P_rab = intersect(ra, rb, P)
 
             if len(P_rab)>=min_support:
@@ -169,39 +167,39 @@ def get_frequent_sequences(P, top_k, min_support, frequent_sequences,  not_frequ
                 Pa[rab] = P_rab
         if Pa:
             # remove elements that became unfrequent
-            remove_unfrequent(k, frequent_sequences, not_frequent_anymore)
+            remove_unfrequent(k, frequent_sequences)
 
             # update min_support after removind unfrequent
             if len(frequent_sequences)<k:
                 min_support = 1
             else:
-                min_support = heapq.nsmallest(1, frequent_sequences)[0][0]
+                min_support = frequent_sequences[0][0]
 
             if Pa: 
-                get_frequent_sequences(Pa, top_k, min_support, frequent_sequences, not_frequent_anymore)
+                get_frequent_sequences(Pa, top_k, min_support, frequent_sequences)
                 # update min_support after recursive call
                 if len(frequent_sequences)<k:
                     min_support = 1
                 else:
-                    min_support = heapq.nsmallest(1, frequent_sequences)[0][0]
+                    min_support =frequent_sequences[0][0]
 
     return frequent_sequences
 
 
 
 
-
-
-
-
-def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min_wracc, frequent_sequences, not_frequent_anymore):
+def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min_wracc, frequent_sequences):
 
     for ra in P:
-        if ra in not_frequent_anymore:
+        ra_pos_support = get_positive_support(nb_pos, P[ra])
+        if ra_pos_support < min_positive_support:
             continue
+
         Pa = {}
         for rb in P:
-            if rb in not_frequent_anymore:
+            ra_pos_support = get_positive_support(nb_pos, P[ra])
+            rb_pos_support = get_positive_support(nb_pos, P[rb])
+            if ra_pos_support < min_positive_support or rb_pos_support <min_positive_support:
                 continue
 
             rab, P_rab = intersect(ra, rb, P)
@@ -215,22 +213,22 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min
                     Pa[rab] = P_rab
         if Pa:
             # remove elements that became unfrequent
-            remove_unfrequent(k, frequent_sequences, not_frequent_anymore)
+            remove_unfrequent(k, frequent_sequences)
 
             # update min_support after removind unfrequent
             if len(frequent_sequences)<k:
                 min_positive_support = 0
             else:
-                min_wracc = heapq.nsmallest(1, frequent_sequences)[0][0]
+                min_wracc = frequent_sequences[0][0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
 
             if Pa: 
-                get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, frequent_sequences, not_frequent_anymore)
+                get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, frequent_sequences)
                 # update min_support after recursive call
                 if len(frequent_sequences)<k:
                     min_positive_support = 0
                 else:
-                    min_wracc = heapq.nsmallest(1, frequent_sequences)[0][0]
+                    min_wracc = frequent_sequences[0][0]
                     min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
     return frequent_sequences
 
@@ -277,7 +275,7 @@ if __name__ == '__main__':
     # neg_filepath = "Test/negative.txt"
 
     # Create the object
-    k = 5
+    k = 100
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
     sol = s.min_top_k(True)
