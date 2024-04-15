@@ -104,7 +104,7 @@ class Spade:
             else:
                 min_wracc = heap_best_values[0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
-            get_best_wrack_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, heap_best_values, dictionnary_best_sequences)
+            get_best_wracc_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, heap_best_values, dictionnary_best_sequences)
         
         else: 
             if len(heap_best_values)<k:
@@ -264,7 +264,7 @@ def get_frequent_sequences(P:dict, top_k:int, min_support:int, heap_best_frequen
 
 
 
-def get_best_wrack_sequences(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_positive_support:float, min_wracc:float, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
+def get_best_wracc_sequences(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_positive_support:float, min_wracc:float, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
     """
     Finds the best WRACC sequences.
 
@@ -317,7 +317,7 @@ def get_best_wrack_sequences(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_posi
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
 
             if Pa: 
-                get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, heap_best_values, dictionnary_best_sequences)
+                get_best_wracc_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, heap_best_values, dictionnary_best_sequences)
                 # update min_support after recursive call
                 if len(heap_best_values)<top_k:
                     min_positive_support = 0
@@ -405,7 +405,7 @@ def main():
     neg_filepath = sys.argv[2] # filepath to negative class file
     k = int(sys.argv[3])
 
-    wrack = False
+    wracc = False
 
 
     # pos_filepath = "datasets/Protein/PKA_group15.txt"
@@ -415,16 +415,16 @@ def main():
     # neg_filepath = "Test/negative.txt"
 
     # k = 5
-    # wrack = False
+    # wracc = False
 
     # k = 7
-    # wrack = True
+    # wracc = True
 
 
     # Create the object
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
-    sol = s.min_top_k(wrack)
+    sol = s.min_top_k(wracc)
     b = timeit.default_timer()
     # print(b-a)
 
@@ -443,7 +443,7 @@ def main():
             k+=1
         string = string + "]"
 
-        if wrack : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
+        if wracc : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
         else: print(string,pos_support, support-pos_support, support)
 
         # print(sol)
