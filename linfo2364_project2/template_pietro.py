@@ -1,12 +1,9 @@
+#!/usr/bin/env python3
+
 import sys
 import heapq
 import numpy as np
-from copy import copy
-
-import pandas as pd
-from sklearn import tree, metrics
-
-
+import timeit
 
 # sys.setrecursionlimit(sys.maxunicode)
 
@@ -164,9 +161,6 @@ def remove_unfrequent(k:int, heap_best_values:list, dictionnary_best_sequences:d
 
 
 
-
-
-
 def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, dictionnary_most_frequent_sequences):
     for ra in P:
         if len(P[ra]) < min_support:
@@ -187,10 +181,10 @@ def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, diction
                 Pa[rab]=P_rab
         if Pa:
             # remove elements that became unfrequent
-            remove_unfrequent(k,heap_best_frequencies, dictionnary_most_frequent_sequences)
+            remove_unfrequent(top_k,heap_best_frequencies, dictionnary_most_frequent_sequences)
 
             # update min_support after removind unfrequent
-            if len(heap_best_frequencies)<k:
+            if len(heap_best_frequencies)<top_k:
                 min_support = 1
             else:
                 min_support = heap_best_frequencies[0]
@@ -198,13 +192,12 @@ def get_frequent_sequences(P, top_k, min_support, heap_best_frequencies, diction
             if Pa: 
                 get_frequent_sequences(Pa, top_k, min_support, heap_best_frequencies, dictionnary_most_frequent_sequences)
                 # update min_support after recursive call
-                if len(heap_best_frequencies)<k:
+                if len(heap_best_frequencies)<top_k:
                     min_support = 1
                 else:
                     min_support =heap_best_frequencies[0]
 
     return heap_best_frequencies, dictionnary_most_frequent_sequences
-
 
 
 
@@ -239,10 +232,10 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min
                     Pa[rab] = P_rab
         if Pa:
             # remove elements that became unfrequent
-            remove_unfrequent(k,heap_best_values, dictionnary_best_sequences)
+            remove_unfrequent(top_k,heap_best_values, dictionnary_best_sequences)
 
             # update min_support after removind unfrequent
-            if len(heap_best_values)<k:
+            if len(heap_best_values)<top_k:
                 min_positive_support = 0
             else:
                 min_wracc = heap_best_values[0]
@@ -251,15 +244,12 @@ def get_best_wrack_sequences(P, top_k, nb_pos, nb_neg, min_positive_support, min
             if Pa: 
                 get_best_wrack_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, heap_best_values, dictionnary_best_sequences)
                 # update min_support after recursive call
-                if len(heap_best_values)<k:
+                if len(heap_best_values)<top_k:
                     min_positive_support = 0
                 else:
                     min_wracc = heap_best_values[0]
                     min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
     return heap_best_values, dictionnary_best_sequences
-
-
-
 
 
 
@@ -282,7 +272,7 @@ def get_min_positive_support(min_Wracc, nb_pos, nb_neg):
 
 
 def get_positive_support(P, transactions_containing_pattern):
-    return len([i < P for i in transactions_containing_pattern])
+    return sum([i < P for i in transactions_containing_pattern])
 
 def weighted_relative_accuracy(nb_pos, nb_neg, transactions_containing_pattern):
     p = sum([i < nb_pos for i in transactions_containing_pattern])
@@ -292,21 +282,44 @@ def weighted_relative_accuracy(nb_pos, nb_neg, transactions_containing_pattern):
     return (nb_pos/(nb_pos+nb_neg))*(nb_neg/(nb_pos+nb_neg))*(p/nb_pos-n/nb_neg)
 
 
-if __name__ == '__main__':
-    import timeit
-    pos_filepath = "datasets/Protein/PKA_group15.txt"
-    neg_filepath = "datasets/Protein/SRC1521.txt"
 
-    pos_filepath = "Test/positive.txt"
-    neg_filepath = "Test/negative.txt"
+
+def main():
+    pos_filepath = sys.argv[1] # filepath to positive class file
+    neg_filepath = sys.argv[2] # filepath to negative class file
+    k = int(sys.argv[3])
+
+
+    # pos_filepath = "datasets/Protein/PKA_group15.txt"
+    # neg_filepath = "datasets/Protein/SRC1521.txt"
+
+    # pos_filepath = "Test/positive.txt"
+    # neg_filepath = "Test/negative.txt"
+    # k = 5
+
+
 
     # Create the object
-    k = 7
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
-    sol = s.min_top_k(True)
+    sol = s.min_top_k()
     b = timeit.default_timer()
-    print(b-a)
+    # print(b-a)
+
+    # -> return un tuple, le premier element ce sera tj {"nom_pattern":{transactions_id}}, le deuxième élément ce sera nb transaction positive
+    nb_pos = sol[1]
+    for i in sol[0]:
+        support = len(sol[0][i])
+        pos_support = get_positive_support(nb_pos, sol[0][i])
+        print(i.split('-'),pos_support, support-pos_support, support)
+    # print(sol)
+
+
+if __name__ == "__main__":
+    main()
+
+
+
 
 
 
