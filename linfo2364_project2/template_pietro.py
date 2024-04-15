@@ -41,7 +41,7 @@ class Spade:
 
       
 
-    def min_top_k(self, criterion_is_wracc=False)->Tuple[dict, int, int]: 
+    def min_top_k(self, criterion="sup")->Tuple[dict, int, int]: 
         """
         Mines the top-k sequences based on specified criteria.
 
@@ -69,11 +69,13 @@ class Spade:
         heapq.heapify(heap_best_values)
         min_support = 1
 
-        if criterion_is_wracc:
+        if criterion=="wracc"or criterion=="abswracc":
             for sequence in D:
                 nb_pos = self.nb_pos
                 nb_neg = self.nb_neg
                 wracc = weighted_relative_accuracy(nb_pos, nb_neg, D[sequence])
+                if criterion == "abswracc":wracc = abs(wracc)
+
                 if wracc in dictionnary_best_sequences:
                     dictionnary_best_sequences[wracc].append((wracc, sequence, D[sequence]))
                 else:
@@ -83,7 +85,7 @@ class Spade:
                 P[sequence] = D[sequence]
             
 
-        else:
+        elif criterion == "sup":
             for sequence in D:
                 support = len(D[sequence])
                 if support in dictionnary_best_sequences:
@@ -95,9 +97,10 @@ class Spade:
                 P[sequence] = D[sequence]
 
 
+
         remove_unfrequent(k, heap_best_values, dictionnary_best_sequences)
 
-        if criterion_is_wracc:
+        if criterion=="wracc":
             if len(heap_best_values)<k:
                 min_positive_support = 0
                 min_wracc = -np.inf
@@ -105,8 +108,18 @@ class Spade:
                 min_wracc = heap_best_values[0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
             get_best_wracc_sequences(P, k, nb_pos, nb_neg,min_positive_support, min_wracc, heap_best_values, dictionnary_best_sequences)
-        
-        else: 
+        elif criterion=="abswracc":
+            if len(heap_best_values)<k:
+                min_positive_support = 0
+                min_negative_support = 0
+                min_wracc = 0
+            else:
+                min_wracc = heap_best_values[0]
+                min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
+                min_negative_support = get_min_negative_support(min_wracc, nb_pos, nb_neg)
+            alternative_miner(P, k, nb_pos, nb_neg,min_positive_support, min_negative_support, min_wracc, heap_best_values, dictionnary_best_sequences)
+
+        elif criterion=="sup": 
             if len(heap_best_values)<k:
                 min_support = 1
             else:
@@ -305,6 +318,79 @@ def get_best_wracc_sequences(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_posi
 
 
 
+def alternative_miner(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_positive_support:float, min_negative_support:float, min_wracc:float, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
+    """
+    Finds the best WRACC sequences.
+
+    Args:
+        P (dict): The dictionary of transactions.
+        top_k (int): The number of top sequences to keep.
+        nb_pos (int): The number of positive transactions.
+        nb_neg (int): The number of negative transactions.
+        min_positive_support (float): The minimum positive support threshold.
+        min_wracc (float): The minimum WRACC score.
+        heap_best_values (list): A list of the best WRACC values.
+        dictionnary_best_sequences (dict): A dictionary containing the best WRACC sequences.
+    """
+    for ra in P:
+        ra_pos_support = get_positive_support(nb_pos, P[ra])
+        ra_neg_support = len(P[ra])-ra_pos_support
+
+        if ra_pos_support < min_positive_support or ra_neg_support<min_negative_support:
+            continue
+
+        Pa = {}
+        for rb in P:
+            rb_pos_support = get_positive_support(nb_pos, P[rb])
+            rb_neg_support = len(P[rb])-rb_pos_support
+
+
+            if ra_pos_support < min_positive_support or rb_pos_support <min_positive_support  or ra_neg_support<min_negative_support or rb_neg_support <min_negative_support:
+                continue
+
+            (rab, P_rab) = intersect(ra, rb, P)
+
+            if len(P_rab)>=1:
+                pos_support = get_positive_support(nb_pos, P_rab)
+                if pos_support >= min_positive_support:
+                    abs_wracc = abs(weighted_relative_accuracy(nb_pos, nb_neg, P_rab))
+                    if abs_wracc>= min_wracc:
+                        if abs_wracc in dictionnary_best_sequences:
+                            dictionnary_best_sequences[abs_wracc].append((abs_wracc, rab, P_rab))
+                        else:
+                            heapq.heappush(heap_best_values, abs_wracc)
+                            dictionnary_best_sequences[abs_wracc]=[]
+                            dictionnary_best_sequences[abs_wracc].append((abs_wracc, rab, P_rab))
+
+
+                            # remove elements that became unfrequent
+                            remove_unfrequent(top_k,heap_best_values, dictionnary_best_sequences)
+
+                            # update min_support after removind unfrequent
+                            if len(heap_best_values)<top_k:
+                                min_positive_support = 0
+                                min_negative_support = 0
+                            else:
+                                min_wracc = heap_best_values[0]
+                                min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg) 
+                                min_negative_support = get_min_negative_support(min_wracc, nb_pos, nb_neg)
+
+
+                    Pa[rab] = P_rab
+                    
+
+        if Pa: 
+            alternative_miner(Pa, top_k,nb_pos, nb_neg, min_positive_support, min_negative_support, min_wracc, heap_best_values, dictionnary_best_sequences)
+            # update min_support after recursive call
+            if len(heap_best_values)<top_k:
+                min_positive_support = 0
+                min_negative_support = 0
+            else:
+                min_wracc = heap_best_values[0]
+                min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
+                min_negative_support = get_min_negative_support(min_wracc, nb_pos, nb_neg)
+
+
 
 
 
@@ -378,6 +464,23 @@ def get_min_positive_support(min_Wracc:float, nb_pos:int, nb_neg:int)->float:
     return (((nb_pos+nb_neg)**2)/nb_neg)*min_Wracc
 
 
+
+def get_min_negative_support(min_Wracc:float, nb_pos:int, nb_neg:int)->float:
+    """
+    Calculates the minimum negative support.
+
+    Args:
+        min_Wracc (float): The minimum WRACC score.
+        nb_pos (int): The number of positive transactions.
+        nb_neg (int): The number of negative transactions.
+
+    Returns:
+        float: The minimum positive support.
+    """    
+    return (((nb_pos+nb_neg)**2)/nb_pos)*min_Wracc
+
+
+
 def get_positive_support(nb_pos:int, transactions_containing_pattern:dict)->int:
     """
     Calculates the positive support.
@@ -421,20 +524,20 @@ def main():
     pos_filepath = "datasets/Protein/PKA_group15.txt"
     neg_filepath = "datasets/Protein/SRC1521.txt"
 
-    # pos_filepath = "Test/positive.txt"
-    # neg_filepath = "Test/negative.txt"
+    pos_filepath = "Test/positive.txt"
+    neg_filepath = "Test/negative.txt"
+
+    # k = 100
+    # criterion = "wracc"
 
     k = 100
-    wracc = False
-
-    k = 100
-    wracc = True
+    criterion = "abswracc"
 
 
     # Create the object
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
-    sol = s.min_top_k(wracc)
+    sol = s.min_top_k(criterion)
     b = timeit.default_timer()
     # print(b-a)
 
@@ -453,8 +556,9 @@ def main():
             k+=1
         string = string + "]"
 
-        if wracc : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
-        else: print(string,pos_support, support-pos_support, support)
+        if criterion=="wracc" : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
+        elif criterion=="abswracc": print(string,pos_support, support-pos_support, abs(weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i])))
+        else: print(string,pos_support, support-pos_support, i[3])
 
         # print(sol)
 
