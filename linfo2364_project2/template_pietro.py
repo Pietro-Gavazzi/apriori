@@ -188,29 +188,7 @@ def spade_repr_from_transaction(transactions:dict, min_id=0)->Tuple[dict, int]:
 
 
 
-def remove_unfrequent(k:int, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
-    """
-    Method that removes unfrequent sequences from the list of best sequences.
 
-    Args:
-        k (int): The number of top sequences to keep.
-        heap_best_values (list): A list of the best values (e.g., support or WRACC scores).
-        dictionnary_best_sequences (dict): A dictionary containing the best sequences.
-    """
-
-    # calculate how many sequences are in excess, if there are not we don't have unfrequent
-    nb_exces_sequences = len(heap_best_values)-k if len(heap_best_values)-k > 0 else 0
-    if nb_exces_sequences == 0: return
-
-    excess_list = []
-
-    # take n+1 best elements, and remove elements with value strictly inferior to the last best sequence
-    while nb_exces_sequences > 0:
-        excess_list.append(heapq.heappop(heap_best_values))
-        nb_exces_sequences-=1
-    
-    for value in excess_list:
-        dictionnary_best_sequences.pop(value)
     
 
 
@@ -242,24 +220,24 @@ def get_frequent_sequences(P:dict, top_k:int, min_support:int, heap_best_frequen
                     heapq.heappush(heap_best_frequencies, support_rab)
                     dictionnary_most_frequent_sequences[support_rab] = []
                     dictionnary_most_frequent_sequences[support_rab].append((support_rab, rab, P_rab))
-                Pa[rab]=P_rab
-        if Pa:
-            # remove elements that became unfrequent
-            remove_unfrequent(top_k,heap_best_frequencies, dictionnary_most_frequent_sequences)
+                
+                    # remove elements that became unfrequent
+                    remove_unfrequent(top_k,heap_best_frequencies, dictionnary_most_frequent_sequences)
 
-            # update min_support after removind unfrequent
+                    # update min_support after removind unfrequent
+                    if len(heap_best_frequencies)<top_k:
+                        min_support = 1
+                    else:
+                        min_support = heap_best_frequencies[0]
+
+                Pa[rab]=P_rab
+        if Pa: 
+            get_frequent_sequences(Pa, top_k, min_support, heap_best_frequencies, dictionnary_most_frequent_sequences)
+            # update min_support after recursive call
             if len(heap_best_frequencies)<top_k:
                 min_support = 1
             else:
-                min_support = heap_best_frequencies[0]
-
-            if Pa: 
-                get_frequent_sequences(Pa, top_k, min_support, heap_best_frequencies, dictionnary_most_frequent_sequences)
-                # update min_support after recursive call
-                if len(heap_best_frequencies)<top_k:
-                    min_support = 1
-                else:
-                    min_support =heap_best_frequencies[0]
+                min_support =heap_best_frequencies[0]
 
 
 
@@ -297,33 +275,39 @@ def get_best_wracc_sequences(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_posi
                 if pos_support >= min_positive_support:
                     wracc = weighted_relative_accuracy(nb_pos, nb_neg, P_rab)
                     if wracc>= min_wracc:
-
                         if wracc in dictionnary_best_sequences:
                             dictionnary_best_sequences[wracc].append((wracc, rab, P_rab))
                         else:
                             heapq.heappush(heap_best_values, wracc)
                             dictionnary_best_sequences[wracc]=[]
                             dictionnary_best_sequences[wracc].append((wracc, rab, P_rab))
-                    Pa[rab] = P_rab
-        if Pa:
-            # remove elements that became unfrequent
-            remove_unfrequent(top_k,heap_best_values, dictionnary_best_sequences)
 
-            # update min_support after removind unfrequent
+
+                            # remove elements that became unfrequent
+                            remove_unfrequent(top_k,heap_best_values, dictionnary_best_sequences)
+
+                            # update min_support after removind unfrequent
+                            if len(heap_best_values)<top_k:
+                                min_positive_support = 0
+                            else:
+                                min_wracc = heap_best_values[0]
+                                min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg) 
+
+
+                    Pa[rab] = P_rab
+                    
+
+        if Pa: 
+            get_best_wracc_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, heap_best_values, dictionnary_best_sequences)
+            # update min_support after recursive call
             if len(heap_best_values)<top_k:
                 min_positive_support = 0
             else:
                 min_wracc = heap_best_values[0]
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
 
-            if Pa: 
-                get_best_wracc_sequences(Pa, top_k,nb_pos, nb_neg, min_positive_support,min_wracc, heap_best_values, dictionnary_best_sequences)
-                # update min_support after recursive call
-                if len(heap_best_values)<top_k:
-                    min_positive_support = 0
-                else:
-                    min_wracc = heap_best_values[0]
-                    min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
+
+
 
 
 
@@ -351,6 +335,35 @@ def intersect(ra:str, rb:str, P:dict)-> Tuple[str, dict]:
             P_rab[t_id] = position_list_ab
 
     return (rab, P_rab)
+
+
+
+
+def remove_unfrequent(k:int, heap_best_values:list, dictionnary_best_sequences:dict)-> None:
+    """
+    Method that removes unfrequent sequences from the list of best sequences.
+
+    Args:
+        k (int): The number of top sequences to keep.
+        heap_best_values (list): A list of the best values (e.g., support or WRACC scores).
+        dictionnary_best_sequences (dict): A dictionary containing the best sequences.
+    """
+
+    # calculate how many sequences are in excess
+    nb_exces_sequences = len(heap_best_values)-k if len(heap_best_values)-k > 0 else 0
+
+    if nb_exces_sequences :
+
+        excess_list = []
+
+        # take n+1 best elements, and remove elements with value strictly inferior to the last best sequence
+        while nb_exces_sequences > 0:
+            excess_list.append(heapq.heappop(heap_best_values))
+            nb_exces_sequences-=1
+        
+        for value in excess_list:
+            dictionnary_best_sequences.pop(value)
+
 
 
 def get_min_positive_support(min_Wracc:float, nb_pos:int, nb_neg:int)->float:
@@ -401,24 +414,24 @@ def weighted_relative_accuracy(nb_pos:int, nb_neg:int, transactions_containing_p
 
 
 def main():
-    pos_filepath = sys.argv[1] # filepath to positive class file
-    neg_filepath = sys.argv[2] # filepath to negative class file
-    k = int(sys.argv[3])
+    # pos_filepath = sys.argv[1] # filepath to positive class file
+    # neg_filepath = sys.argv[2] # filepath to negative class file
+    # k = int(sys.argv[3])
 
-    wracc = False
+    # wracc = True
 
 
-    # pos_filepath = "datasets/Protein/PKA_group15.txt"
-    # neg_filepath = "datasets/Protein/SRC1521.txt"
+    pos_filepath = "datasets/Protein/PKA_group15.txt"
+    neg_filepath = "datasets/Protein/SRC1521.txt"
 
     # pos_filepath = "Test/positive.txt"
     # neg_filepath = "Test/negative.txt"
 
-    # k = 5
-    # wracc = False
+    k = 100
+    wracc = False
 
-    # k = 7
-    # wracc = True
+    k = 100
+    wracc = True
 
 
     # Create the object
