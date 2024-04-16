@@ -38,6 +38,15 @@ class Spade:
         self.neg_transactions_cover = self.neg_transactions['covers']
 
         self.k = k
+        D = self.pos_transactions_repr.copy()
+
+        for j, transaction in self.neg_transactions_repr.items():
+            try:
+                D[j].update(transaction)
+            except:
+                D[j] = transaction
+        self.D=D
+
 
       
 
@@ -52,8 +61,6 @@ class Spade:
             Tuple[dict, int, int]: A tuple containing the mined sequences, the total number of positive transactions, and the total number of negative transactions in the dataset.
         """
 
-
-        k = self.k
         D = self.pos_transactions_repr.copy()
 
         for j, transaction in self.neg_transactions_repr.items():
@@ -61,7 +68,9 @@ class Spade:
                 D[j].update(transaction)
             except:
                 D[j] = transaction
-
+        self.D=D
+        k = self.k
+        
         heap_best_values = []
         dictionnary_best_sequences = {}
         P = {}
@@ -83,8 +92,6 @@ class Spade:
                     dictionnary_best_sequences[wracc] = []
                     dictionnary_best_sequences[wracc].append((wracc, sequence, D[sequence]))
                 P[sequence] = D[sequence]
-            
-
         elif criterion == "sup":
             for sequence in D:
                 support = len(D[sequence])
@@ -118,7 +125,6 @@ class Spade:
                 min_positive_support = get_min_positive_support(min_wracc, nb_pos, nb_neg)
                 min_negative_support = get_min_negative_support(min_wracc, nb_pos, nb_neg)
             alternative_miner(P, k, nb_pos, nb_neg,min_positive_support, min_negative_support, min_wracc, heap_best_values, dictionnary_best_sequences)
-
         elif criterion=="sup": 
             if len(heap_best_values)<k:
                 min_support = 1
@@ -336,7 +342,7 @@ def alternative_miner(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_positive_su
         ra_pos_support = get_positive_support(nb_pos, P[ra])
         ra_neg_support = len(P[ra])-ra_pos_support
 
-        if ra_pos_support < min_positive_support or ra_neg_support<min_negative_support:
+        if ra_pos_support < min_positive_support and ra_neg_support<min_negative_support:
             continue
 
         Pa = {}
@@ -345,7 +351,7 @@ def alternative_miner(P:dict, top_k:int, nb_pos:int, nb_neg:int, min_positive_su
             rb_neg_support = len(P[rb])-rb_pos_support
 
 
-            if ra_pos_support < min_positive_support or rb_pos_support <min_positive_support  or ra_neg_support<min_negative_support or rb_neg_support <min_negative_support:
+            if (ra_pos_support < min_positive_support and  ra_neg_support<min_negative_support) or (rb_pos_support <min_positive_support  and rb_neg_support <min_negative_support):
                 continue
 
             (rab, P_rab) = intersect(ra, rb, P)
@@ -514,24 +520,26 @@ def weighted_relative_accuracy(nb_pos:int, nb_neg:int, transactions_containing_p
 
 
 def main():
-    # pos_filepath = sys.argv[1] # filepath to positive class file
-    # neg_filepath = sys.argv[2] # filepath to negative class file
-    # k = int(sys.argv[3])
-
-    # wracc = True
+    pos_filepath = sys.argv[1] # filepath to positive class file
+    neg_filepath = sys.argv[2] # filepath to negative class file
+    k = int(sys.argv[3])
 
 
-    pos_filepath = "datasets/Protein/PKA_group15.txt"
-    neg_filepath = "datasets/Protein/SRC1521.txt"
 
-    pos_filepath = "Test/positive.txt"
-    neg_filepath = "Test/negative.txt"
+    # pos_filepath = "datasets/Protein/PKA_group15.txt"
+    # neg_filepath = "datasets/Protein/SRC1521.txt"
+
+    # pos_filepath = "datasets/Reuters_small/earn_small.txt" 
+    # neg_filepath = "datasets/Reuters_small/acq_small.txt"
+
+    # "sup" "wracc" "abswracc"
+    criterion = "wracc"
 
     # k = 100
     # criterion = "wracc"
 
-    k = 100
-    criterion = "abswracc"
+    # k = 7
+    # criterion = "abswracc"
 
 
     # Create the object
@@ -558,7 +566,7 @@ def main():
 
         if criterion=="wracc" : print(string,pos_support, support-pos_support, weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i]))
         elif criterion=="abswracc": print(string,pos_support, support-pos_support, abs(weighted_relative_accuracy(nb_pos, nb_neg, sol[0][i])))
-        else: print(string,pos_support, support-pos_support, i[3])
+        else: print(string, pos_support, support-pos_support, support )
 
         # print(sol)
 
