@@ -524,24 +524,9 @@ def main():
     neg_filepath = sys.argv[2] # filepath to negative class file
     k = int(sys.argv[3])
 
-
-
-    # pos_filepath = "datasets/Protein/PKA_group15.txt"
-    # neg_filepath = "datasets/Protein/SRC1521.txt"
-
-    # pos_filepath = "datasets/Reuters_small/earn_small.txt" 
-    # neg_filepath = "datasets/Reuters_small/acq_small.txt"
-
-    # "sup" "wracc" "abswracc"
     criterion = "wracc"
 
-    # k = 100
-    # criterion = "wracc"
-
-    # k = 7
-    # criterion = "abswracc"
-
-
+    
     # Create the object
     a = timeit.default_timer()
     s = Spade(pos_filepath, neg_filepath, k)
